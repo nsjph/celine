@@ -1,0 +1,5 @@
+{:privmsg 
+	{:hello 
+		{:description "Says hello when invoked"
+		 :handler (fn [conn {:keys [text] :as args}]
+		 	(irc/reply conn args "hello"))}}}

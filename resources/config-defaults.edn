@@ -1,0 +1,14 @@
+{
+	:nickname "celine"
+	:realname "celine"
+	:username "celine"
+	:networks {
+		:freenode {
+			:server "irc.freenode.net"
+			:port 6667
+			:channels {
+				"#celine-test" {}
+			}
+		}
+	}
+}
