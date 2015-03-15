@@ -1,57 +1,23 @@
 (ns celine.plugins
 	(:require [me.raynes.fs :as fs]
 		[irclj.core :as irc]
-		[irclj.connection :as connection])
+		[irclj.connection :as connection]
+		[celine.config :refer [bots]]
+		[celine.redis :refer [wcar*]]
+		[taoensso.carmine :as car])
 	(:gen-class))
 
-(def plugin-dir (fs/expand-home "~/.celine/plugins/"))
 (def plugins (atom {}))
-(def oplist (atom {})) ; list of strings, each a concatentated channel + user host, ie #example1.2.3.4
-(def hostmasks (atom {}))
 (def prefix (atom "@"))
-
-(defn deep-merge
-	"Deep merge two maps"
-	[& values]
-	(if (every? map? values)
-		(apply merge-with deep-merge values)
-		(last values)))
-
-(defn merge-plugins [& args]
-	(reduce deep-merge (map comp (list args))))
-
-(defn init-plugin-dir []
-	(when-not (true? (fs/exists? plugin-dir))
-		(do
-			(printf "Creating plugin directory %s\n" plugin-dir)
-			(fs/mkdir plugin-dir))))
 
 (defn starts-with-prefix? [msg prefix] (.startsWith msg prefix))
 
-(def addop-plugin 
-	{:event :privmsg 
-	 :command "addop"
-	 :handler (fn [conn {:keys [nick user host] :as from} cmdargs]
-	(let [chanarg (first cmdargs) 
-		  hostarg (second cmdargs)]
-		  (prn chanarg hostarg)
-	(swap! oplist assoc chanarg (conj (get @oplist chanarg) hostarg))
-	(irc/message conn nick (format "Added %s\n" (str chanarg hostarg)))
-	))})
-
-(def listops-plugin
-	{:event :privmsg
-	 :command "listops"
-	 :handler (fn [conn {:keys [nick user host] :as args} cmdargs]
-	 	(prn cmdargs)
-	 	(when-let [channel (first cmdargs)]
-	 		(irc/message conn nick (get @oplist channel))))})
-
-(defn add-plugin 
+(defn register-plugin 
 	[{:keys [event command handler] :as plugin}]
 	(swap! plugins assoc event (assoc (get @plugins event) command handler)))
 
 (defn privmsg-event-handler [conn {:keys [target host text nick] :as args}]
+	(prn (args :raw))
 	(when (true? (starts-with-prefix? text @prefix))
 		(let [[command & cmdargs] (clojure.string/split text #"\s+")
 			  [_ command] (clojure.string/split command #"@")]
@@ -61,8 +27,27 @@
 
 			  )))
 
-(add-plugin addop-plugin)
-(add-plugin listops-plugin)			
+(def redis-set-plugin
+	{:event :privmsg
+	 :command "set"
+	 :handler (fn [conn {:keys [nick user host] :as args} cmdargs]
+	 	(let [k (first cmdargs) v (second cmdargs)]
+	 		(printf "DEBUG: redis-set-plugin: setting %s to %s\n" k v)
+	 		(when (wcar* (car/set k v))
+	 			(irc/message conn nick (format "Set %s to %s" k v)))))})
+
+(def redis-get-plugin
+	{:event :privmsg
+	 :command "get"
+	 :handler (fn [conn {:keys [nick user host] :as args} cmdargs]
+	 	(let [k (first cmdargs)]
+	 		(printf "DEBUG: redis-get-plugin: getting %s\n" k)
+	 			(irc/message conn nick (format "%s is %s" k (wcar* (car/get k))))))})
+
+
+(register-plugin redis-set-plugin)
+(register-plugin redis-get-plugin)
+			
 ; (def addop-plugin
 ; 	{:prefix {"addop" (fn [conn {:keys [target text] :as args}]
 ; 		)}})

@@ -13,32 +13,32 @@
 (defn get-hosts [hostname]
 	(InetAddress/getAllByName hostname))
 
-(defn host-to-addr [host]
+(defn ip-to-addr [host]
 	(cond
 		(instance? Inet4Address host) (.getHostAddress host)
 		(instance? Inet6Address host) (str "[" (.getHostAddress host) "]")
 		))
 
-(defn host-to-addr-string [host]
+(defn ip-to-addr-string [host]
 	(let [addr (rand-nth (InetAddress/getAllByName host))]
 		(cond 
 			(instance? Inet4Address addr) (.getHostAddress addr)
 			(instance? Inet6Address addr) (str "[" (.getHostAddress addr) "]"))))
 
-(defn safe-connect [server port nickname callbacks]
-	(println (str "Connecting to " server))
+(defn try-connect [ip port nickname callbacks]
+	(println (str "Connecting to " ip))
 	(try 
-		(irc/connect (host-to-addr server) port nickname :callbacks callbacks :timeout 10)
+		(irc/connect (ip-to-addr ip) port nickname :callbacks callbacks :timeout 10)
 	(catch java.net.ConnectException e (println (str "Connection error: " (.getMessage e))))
 	(catch Exception e (println (str "Connection error: " (.getMessage e))))))
 
-(defn connect-to [servers port nickname callbacks]
-	(if (empty? servers) 
+(defn connect-to [ipaddrs port nickname callbacks]
+	(if (empty? ipaddrs) 
 		(throw (Exception. "No more servers to try"))
-		(let [conn (safe-connect (first servers) port nickname callbacks)]
+		(let [conn (try-connect (first ipaddrs) port nickname callbacks)]
 			(if conn
 				conn
-				(recur (rest servers) port nickname callbacks)))))
+				(recur (rest ipaddrs) port nickname callbacks)))))
 
 
 (defn init-connection [k & rest]

@@ -1,13 +1,10 @@
 {
-	:nickname "celine"
-	:realname "celine"
-	:username "celine"
-	:networks {
 		:freenode {
+			:nickname "arandombot"
 			:server "irc.freenode.net"
 			:port 6667
 			:channels {
-				"#celine-test" {}
+				"#arandombot-test" {}
 			}
 		}
 	}

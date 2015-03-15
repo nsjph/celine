@@ -10,6 +10,7 @@
 (def config-path (str @config-dir "/celine.conf"))
 (def config-defaults-path (io/resource "config-defaults.edn"))
 (def config (atom {}))
+(def bots (atom {}))
 
 (defn read-config [path]
 	(read-string (slurp path)))
@@ -40,7 +41,7 @@
 
 
 
-(defn init-config []
+(defn init-config! []
 	(init-config-dir @config-dir)
 	(init-config-file)
-	(load-config))
+	(reset! config (load-config)))
